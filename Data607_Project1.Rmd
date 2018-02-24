@@ -1,0 +1,83 @@
+---
+title: "Data607_Project_1"
+author: "Femi Adesanya"
+date: "February 24, 2018"
+output: html_document
+---
+#### Project Summary
+
+##### In this project, you're given a text file with chess tournament results where the information has some structure. Your job is to create an R Markdown file that generates a .CSV file (that could for example be imported into a SQL database) with the following information for all of the players: Player's Name, Player's State, Total Number of Points, Player's Pre-Rating, and Average Pre Chess Rating of Opponents For the first player, the information would be: Gary Hua, ON, 6.0, 1794, 1605
+
+
+#### Data Import
+
+##### Text file imported from local folder
+```{r}
+tdata <- read.csv(paste0("C:\\Users\\26291\\Documents\\Data_607\\tournamentinfo.txt"), header =F)
+head(tdata)
+```
+
+
+```{r}
+tail(tdata)
+```
+
+
+#### Data Preprocessing and Wrangling
+
+##### To remove the header in order to retreive information related to player and rating
+```{r}
+tdata <- tdata[-c(1:4),]
+head(tdata)
+```
+
+```{r}
+pInfo <- tdata[seq(1, length(tdata), 3)]
+rInfo <- tdata[seq(2, length(tdata), 3)]
+```
+
+
+#### Data Extraction
+```{r}
+library(stringr)
+pairNo <- as.integer(str_extract(pInfo, "\\d+"))
+Name <- str_trim(str_extract(pInfo, "(\\w+\\s){2,3}"))
+Region <- str_extract(rInfo, "\\w+")
+Points <- as.numeric(str_extract(pInfo, "\\d+\\.\\d+"))
+Rating <- as.integer(str_extract(str_extract(rInfo, "[^\\d]\\d{3,4}[^\\d]"), "\\d+"))
+Opponents <- str_extract_all(str_extract_all(pInfo, "\\d+\\|"), "\\d+")
+Won <- str_count(pInfo, "\\Q|W  \\E")
+Loose <- str_count(pInfo, "\\Q|L  \\E")
+Draw <- str_count(pInfo, "\\Q|D  \\E")
+```
+
+
+#### Average Opponent Calculation
+
+###### to calculate average Rating, we add all the Opponents Pre Torunamanet Ratings and divide it by the total number of games played by the player.
+```{r}
+avgRating <- length(pInfo)
+for (i in 1:length(pInfo)) { 
+  avgRating[i] <- round(mean(Rating[as.numeric(unlist(Opponents[pairNo[i]]))]), digits = 0)
+}
+fdata <- data.frame(Name, Region, Points, Rating, avgRating);
+```
+
+
+#### Final DataSet 
+
+##### with the five attributes
+```{r}
+
+colnames(fdata) <- c("Player's Name", "Player's State", "Total Number of Points", "Player's Pre-Rating", " Average Pre Chess Rating of Opponents")
+library(DT)
+datatable(fdata)
+```
+
+
+#### Create csv file of the final dataset
+```{r}
+write.csv(fdata, file = "chessdata.csv")
+
+```
+
