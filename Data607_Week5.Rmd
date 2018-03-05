@@ -1,0 +1,120 @@
+---
+title: "Data607_Week5"
+author: "Femi Adesanya"
+date: "March 4, 2018"
+output: html_document
+---
+##### Overview: The assignment will consider a wide dataset describing arrival delays for two flightdata1s across five destinations. The purpose of this assignment is to use the tidyr and dplyr packages to tidy and transform the flights datatset and perform comparative analysis of the two flightdata1s. 
+
+```{r}
+library("tidyr")
+library("dplyr")
+```
+
+```{r}
+#Import our data/read csv file into R
+flight <- read.csv(file="C:\\Users\\26291\\Documents\\Data_607\\flight.csv", header =TRUE, stringsAsFactors = FALSE)
+flight
+```
+
+
+```{r}
+str(flight)
+```
+
+##### Tidy Data
+###### 1. Fill first column with complete row names
+```{r}
+library(tidyr)
+flight <- flight %>% fill(X)
+flight
+```
+
+###### 2. Remove NAs
+```{r}
+
+flight <- na.omit(flight)
+```
+
+
+###### 3. Make City attribute data observation
+```{r}
+flight <- gather(flight, "City", "n", 3:7)
+flight
+```
+
+
+###### 4. Turn "OnTime" and "Delayed" row variables into observations
+```{r}
+flight <- spread(flight, "X.1", "n")
+flight
+```
+
+```{r}
+flight <- dplyr::rename(flight, Carrier = X)
+flight <- dplyr::rename(flight, Delayed = delayed)
+flight <- dplyr::rename(flight, On_Time = 'on time')
+flight
+```
+
+##### DATA ANALYSIS
+```{r}
+dplyr::glimpse(flight)
+```
+
+###### Delay duration by days
+```{r}
+select(flight, Carrier, Delayed)
+```
+
+###### Mean and Median  of all Delays
+```{r}
+dplyr::summarise(flight, Mean = mean(Delayed), Median = median(Delayed))
+
+```
+
+###### Number of delays in Descending order
+```{r}
+dplyr::arrange(flight, desc(Delayed))
+```
+
+###### Number of delays in ascending order by Carrier
+```{r}
+dplyr::arrange(flight, Carrier, Delayed)
+```
+
+###### The mean and sum of delays by Carrier:
+```{r}
+Carrier <- flight %>% group_by(Carrier) %>% 
+  summarise(mean = mean(Delayed), sum = sum(Delayed), n = n())
+Carrier
+```
+
+###### The mean and sum of delays by City:
+```{r}
+City <- flight %>% group_by(City) %>% 
+  summarise(mean = mean(Delayed), sum = sum(Delayed)) %>% 
+  arrange(desc(mean))
+City
+```
+
+
+##### VISUALIZATION
+
+###### Table creation for data visualization:
+```{r}
+CityCarrier <- flight %>% group_by(City, Carrier) %>% 
+  summarise(mean = mean(Delayed), sum = sum(Delayed))
+```
+
+
+###### Carrier Delays By City
+```{r}
+library(ggplot2)
+LineGraph <- ggplot(CityCarrier, aes(x = City, y = mean))
+LineGraph <- LineGraph + geom_line(aes(color=factor(Carrier), group = Carrier))
+LineGraph <- LineGraph + scale_color_discrete(name = "Carrier")
+LineGraph <- LineGraph + labs(title = "Carrier Delays by City", x = "City", y = "Total Number of Delays")
+LineGraph
+```
+
