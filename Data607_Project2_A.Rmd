@@ -1,0 +1,313 @@
+---
+title: "Data607_Project2_Cleaning and Descriptive Statistics"
+author: "Femi Adesanya"
+date: "March 14, 2018"
+output: 
+  html_document: 
+    df_print: kable
+    fig_caption: yes
+    theme: united
+    toc: yes
+    toc_depth: 6
+---
+
+```{r setup, include=FALSE}
+pack = c("tidyverse", "magrittr", "psych", "GGally", 
+         "readxl", "corkscrew", "knitr", "markdown")
+sapply(pack, function(x) suppressMessages(require(x, character.only = T)))
+knitr::opts_chunk$set(echo = F, message = F, warning = F,
+                      error = F, fig.align="center")
+```
+
+
+## Cleaning Movie Data
+
+
+```{r}
+funs_v1 = function(x) {
+  class = ifelse(is.character(x), "Categorical", "Continuous")
+  nlev = ifelse(is.character(x), length(unique(na.omit(x))), NA) 
+  nmiss = sum(is.na(x))
+  nvalid = sum(!is.na(x))
+  return(cbind(class, nlev, nmiss, nvalid) %>% as.tibble())
+} 
+```
+
+
+###  <font color="darkblue">  Raw data information </font>
+
+
+```{r}
+setwd("C:\\Users\\26291\\Documents\\Data_607")
+data_v1 = 
+  read_csv("movie_metadata.csv", progress = F) %>%
+  distinct() 
+
+data_v1 %>% 
+  map_df(funs_v1, .id = "name") %>% 
+  arrange(class, name) %>%
+  set_colnames(c("Name", "Type", "No. Levels", "No. Missing", "No. Valid")) %>%
+  kable(caption = "Movie data it contains 4998 rows and 28 columns")
+
+data_v1$movie_imdb_link = NULL
+data_v1$plot_keywords = NULL
+```
+
+
+### <font color="darkblue">  Categorical variables </font>
+
+
+#### <font color="darkred">  Split movie *genres* variable </font>
+ 
+
+```{r}
+genres_df = 
+  data_v1 %$%
+  str_split(genres, "[|]") %>%
+  map(as.tibble) %>% 
+  map(data.table::transpose) %>% bind_rows() %>%
+  set_colnames(paste("genre", 1:8, sep = "_"))
+
+cbind(data_v1 %>% select(genres), genres_df) %>%
+  as.tibble() %>%
+  head(10) %>%
+  kable(caption = "Spliting movie genres variable into many columns (Ten rows)")
+```
+
+
+
+#### <font color="darkred"> Reduce dimension of *content_rating* variables </font>
+
+
+```{r} 
+data_v1 %>% 
+  count(content_rating, sort = T) %>%
+  mutate(Frequency = n,
+         Proportion = n/sum(n)) %>%
+  select(-n) %>%
+  kable(caption = "Variable content_rating befor binning", digits=3)
+
+content_rating_df =
+  transmute(data_v1,
+    content_rating = 
+      content_rating %>% as.character() %>%
+      recode(`TV-Y`="TV > 14", `TV-Y7`="TV > 14", `TV-Y`="TV > 14", `TV-PG`="TV > 14",   
+             `TV-G`="TV > 14", `TV-PG`="TV > 14", `TV-14`="TV > 14", 
+             `TV-Y17` = "TV > 14", `TV-MA` = "TV > 14", `NC-17`="TV > 14",
+             M = "G-M-X", X = "G-M-X", G = "G-M-X",
+             Unrated = "Unrated", `Not Rated` = "Unrated",
+             PG = "PG-13", `PG-13`="PG-13", GP = "PG-13", 
+             Approved = "Passed", Passed = "Passed"))
+
+content_rating_df %>% 
+  count(content_rating, sort = T) %>%
+  mutate(Frequency = n,
+         Proportion = n/sum(n) %>% round(2)) %>%
+  select(-n) %>%
+  kable(caption = "Variable content_rating after binning", digits=3)
+```
+
+
+#### <font color="darkred"> Reduce dimension of *country* variables </font> 
+
+
+```{r}
+data_v1 %>% 
+  count(country, sort = T) %>%
+  mutate(Frequency = n,
+         Proportion = n/sum(n)) %>%
+  select(-n) %>%
+  top_n(10, Frequency) %>%
+  kable(caption = "Variable country befor binning (Top 10)", digits=3)
+
+country_df =
+  transmute(data_v1,
+    country = 
+      country %>% as.character() %>%
+      recode(USA = "USA", UK = "UK", .default = "Others"))
+          #France="France", Canada="Canada", Germany="Germany", Australia="Australia",
+
+country_df %>% 
+  count(country, sort = T) %>%
+  mutate(Frequency = n,
+         Proportion = n/sum(n) %>% round(2)) %>%
+  select(-n) %>%
+  kable(caption = "Variable country after binning", digits=3)
+```
+
+
+#### <font color="darkred"> Reduce dimension of *language* variables </font> 
+
+
+```{r}
+data_v1 %>% 
+  count(language, sort = T) %>%
+  mutate(Frequency = n,
+         Proportion = n/sum(n)) %>%
+  select(-n) %>%
+  top_n(10, Frequency) %>%
+  kable(caption = "Variable language befor binning (Top 10)", digits=3)
+
+language_df =
+  transmute(data_v1,
+    language = 
+      language %>% as.character() %>%
+      recode(English = "English", .default = "Others"))
+
+language_df %>% 
+  count(language, sort = T) %>%
+  mutate(Frequency = n,
+         Proportion = n/sum(n)) %>%
+  select(-n) %>%
+  kable(caption = "Variable language after binning", digits=3)
+```
+
+
+#### <font color="darkred"> Vizualisation </font>
+
+
+```{r}
+data_v2 = 
+  data_v1 %>%
+  select(-genres, -language, -country, -content_rating) %>%
+  cbind(content_rating_df, country_df, language_df, genres_df) %>%
+  as.tibble()
+
+funs_v2 = function(x, title = " ") {
+  xx = barplot(x, border = "dark blue", col = "white", las=2, 
+          cex.axis = .9, cex.names = 0.7, ylab = "Frequency", main = title, 
+          ylim = c(0, ceiling(1.1*max(x))))
+  text(x = xx, y=as.numeric(x), label=as.numeric(x), 
+       pos=3, cex = .7, col = "darkblue")
+}
+```
+
+
+##### <font color="purple"> Movie genres level </font> 
+
+
+```{r, fig.width=12, fig.height=8}
+
+par(mfrow = c(2,2))
+data_v2$genre_1 %>% table() %>% sort() %>% funs_v2(title = "Genre level 1")
+data_v2$genre_2 %>% table() %>% sort() %>% funs_v2(title = "Genre level 2")
+data_v2$genre_3 %>% table() %>% sort() %>% funs_v2(title = "Genre level 3")
+data_v2$genre_4 %>% table() %>% sort() %>% funs_v2(title = "Genre level 4")
+data_v2$genre_5 %>% table() %>% sort() %>% funs_v2(title = "Genre level 5")
+data_v2$genre_6 %>% table() %>% sort() %>% funs_v2(title = "Genre level 6")
+data_v2$genre_7 %>% table() %>% sort() %>% funs_v2(title = "Genre level 7")
+data_v2$genre_8 %>% table() %>% sort() %>% funs_v2(title = "Genre level 8")
+par(mfrow = c(1,1))
+```
+
+
+##### <font color="purple"> Movie top actors and directors </font> 
+
+
+```{r, fig.width=12, fig.height=8}
+n = 20
+par(mfrow = c(2,2))
+data_v2$actor_1_name %>% table() %>% sort(decreasing = T) %>% .[1:n] %>%
+  funs_v2(title = "Top 20 principal actors")
+data_v2$actor_2_name %>% table() %>% sort(decreasing = T) %>% .[1:n] %>%
+  funs_v2(title = "Top 20 2nd actors")
+data_v2$actor_3_name %>% table() %>% sort(decreasing = T) %>% .[1:n] %>%
+  funs_v2(title = "Top 20 3rd actors")
+data_v2$director_name %>% table() %>% sort(decreasing = T) %>% .[1:n] %>%
+  funs_v2(title = "Top 20 3rd director")
+par(mfrow = c(1,1))
+```
+
+
+##### <font color="purple"> Movies other variables </font> 
+
+
+```{r, fig.width=12, fig.height=8}
+par(mfrow = c(2,2))
+data_v2$color %>% table() %>% sort(decreasing = T) %>%
+  funs_v2(title = "Movies color")
+data_v2$country %>% table() %>% sort(decreasing = T) %>%
+  funs_v2(title = "Movies country")
+data_v2$language %>% table() %>% sort(decreasing = T) %>%
+  funs_v2(title = "Movies language")
+data_v2$content_rating %>% table() %>% sort(decreasing = T) %>%
+  funs_v2(title = "Movies content rating")
+par(mfrow = c(1,1))
+```
+
+
+### <font color="darkblue">  Continuous variables </font>
+
+#### <font color="darkred"> Descriptive statistics </font>
+
+```{r}
+continous = sapply(data_v2, is.character)
+data_v3 = data_v2[,!continous]
+
+describe(data_v3 %>% select(-title_year)) %>%
+  mutate(name = rownames(.)) %>%
+  select(name, mean, median, min, max) %>%
+  arrange(name) %>%
+  kable(caption = "Descriptive statistics", digits = 2)
+```
+
+
+```{r}
+n=10
+data_v3 %>% 
+  count(title_year, sort = T) %>%
+  mutate(Frequency = n,
+         Proportion = n/sum(n)) %>%
+  select(-n) %>%
+  top_n(n, Frequency) %>%
+  kable(caption = "Top 10 years", digits = 3)
+```
+
+
+```{r, fig.width=14, fig.height=5}
+x = data_v3$title_year %>% table() %>% sort(decreasing = T) %>% .[1:n]
+xx = barplot(x, border = "dark blue", col = "white", las=2, 
+             cex.axis = .9, cex.names = 0.7, ylab = "No. movies", 
+             ylim = c(0, ceiling(1.1*max(x))))
+text(x = xx, y=as.numeric(x), label=as.numeric(x), 
+     pos=3, cex = 0.7, col = "darkblue", crt=45)
+
+```
+
+<!---
+#### <font color="darkred"> Vizualisation </font>
+
+```{r}
+funs_v3 = function(x, title) {
+  par(mfrow=c(1,2))
+  d = density(x, na.rm = T)
+  plot(d, main=title, xlab = "")
+  polygon(d, col="#a32020", border="darkblue")
+  boxplot(x, col = "#a32020", border = "darkblue", main = title, ylab = "Values")
+  par(mfrow=c(1,1))
+}
+```
+
+
+
+```{r, fig.width=10, fig.height=5, eval=F}
+data_v3$num_critic_for_reviews %>% funs_v3(title = "No. critic for reviews")
+data_v3$duration %>% funs_v3(title = "Duration")
+data_v3$actor_1_facebook_likes %>% funs_v3(title = "No. facebook likes 1st actor")
+data_v3$actor_2_facebook_likes %>% funs_v3(title = "No. facebook likes 2nd actor")
+data_v3$actor_3_facebook_likes %>% funs_v3(title = "No. facebook likes 3rd actor")
+data_v3$director_facebook_likes %>% funs_v3(title = "No. facebook likes director")
+data_v3$gross %>% funs_v3(title = "Gross")
+data_v3$num_voted_users %>% funs_v3(title = "No. votes")
+data_v3$cast_total_facebook_likes %>% funs_v3(title = "No. cast facebook likes")
+data_v3$facenumber_in_poster %>% funs_v3(title = "No. face in poster")
+data_v3$num_user_for_reviews %>% funs_v3(title = "No. reviews")
+data_v3$budget %>% funs_v3(title = "Budget")
+#data_v3$title_year %>% funs_v3(title = "")
+data_v3$imdb_score %>% funs_v3(title = "IMBD score")
+data_v3$aspect_ratio %>% funs_v3(title = "Aspect ratio")
+data_v3$movie_facebook_likes %>% funs_v3(title = "No. movie facebook likes")
+```
+--->
+
+
