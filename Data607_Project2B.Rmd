@@ -1,0 +1,146 @@
+---
+title: "Cleaning and Statistics Descriptive"
+author: "Femi Adesanya"
+date: "March 14, 2018"
+output: 
+  html_document: 
+    df_print: kable
+    fig_caption: yes
+    theme: united
+    toc: yes
+    toc_depth: 6
+---
+
+<!-- download packages -->
+```{r setup, include=FALSE}
+pack = c("tidyverse", "magrittr", "psych", "GGally", 
+         "readxl", "corkscrew", "knitr", "markdown")
+sapply(pack, function(x) suppressMessages(require(x, character.only = T)))
+knitr::opts_chunk$set(echo = F, message = F, warning = F,
+                      error = F, fig.align="center")
+```
+
+
+<!-- Function to compute No. missing and valid values and gives 
+the type of the variables -->
+```{r}
+funs_v1 = function(x) {
+  class = ifelse(is.character(x), "Categorical", "Continuous")
+  nlev = ifelse(is.character(x), length(unique(na.omit(x))), NA) 
+  nmiss = sum(is.na(x))
+  nvalid = sum(!is.na(x))
+  return(cbind(class, nlev, nmiss, nvalid) %>% as.tibble())
+} 
+```
+
+<!-- Braplot function with labels -->
+```{r}
+funs_v2 = function(x, title = " ") {
+  xx = barplot(x, border = "dark blue", col = "white", las=2, 
+          cex.axis = .9, cex.names = 0.7, ylab = "Frequency", main = title, 
+          ylim = c(0, ceiling(1.1*max(x))))
+  text(x = xx, y=as.numeric(x), label=as.numeric(x), 
+       pos=3, cex = .7, col = "darkblue")
+}
+```
+
+
+###  <font color="darkblue">  Raw data information </font>
+
+<!-- Impoort data -->
+```{r}
+file_name = list.files(getwd(), pattern = "xl")
+data_v1 =
+  read_xls(file_name, range = "A6:Z1021", na = c("", "..", " ", "See notes"))
+
+name = c("Country", "ISO Code","Year(s)","Age", "Any method",
+         "Any modern method",
+         "Sterilization Female", "Sterilization Male", "Modern methods Pill", 
+         "Modern methods Injectable", "Modern methods IUD", 
+         "Modern methods Male condom", "Modern methods Vaginal barrier",
+         "Modern methods Implant", "Other modern methods",
+         "Any traditional method", "Traditional methods Rhythm", 
+         "Traditional methods Withdrawal", 
+         "Other traditional methods", "Source", 
+         "Survey name", "Note on population", "Note on methods", 
+         "Notes on residuals Modern methods",
+         "Notes on residuals Traditional methods",
+         "Note on country")
+
+names(data_v1) = name
+data_v1$`ISO Code` = as.character(data_v1$`ISO Code`)
+```
+
+
+<!-- Data description -->
+```{r}
+data_v1 %>% 
+  map_df(funs_v1, .id = "name") %>% 
+  arrange(class, name) %>%
+  set_colnames(c("Name", "Type", "No. Levels", "No. Missing", "No. Valid")) %>%
+  kable(caption = "Movie data it contains 1015 rows and 26 columns")
+
+```
+
+
+### <font color="darkblue">  Categorical variables </font>
+
+<!-- Barplot for Age and Source variables -->
+```{r, fig.width=12, fig.height=5}
+categorical = sapply(data_v1, is.character)
+data_v2 = data_v1[,categorical]
+
+
+par(mfrow = c(1,2))
+data_v2$Age %>% table() %>% sort() %>% funs_v2(title = "Age")
+data_v2$Source %>% table() %>% sort() %>% funs_v2(title = "Source")
+par(mfrow = c(1,1))
+```
+
+
+<!-- Barplot for Years variables and table of top 10 hihest frequency -->
+```{r, fig.width=14, fig.height=5}
+x = data_v2$`Year(s)` %>% table() %>% sort(decreasing = T) 
+xx = barplot(x, border = "dark blue", col = "white", las=2, 
+             cex.axis = .9, cex.names = .5, 
+             ylab = "Frequency", main = "Year(s)",
+             ylim = c(0, ceiling(1.1*max(x))))
+text(x = xx, y=as.numeric(x), label=as.numeric(x), 
+     pos=3, cex = 0.4, col = "darkblue", crt=45)
+
+n=10
+
+data_v2 %>%
+  count(`Year(s)`, sort = T) %>%
+  mutate(Frequency = n,
+         Proportion = n/sum(n)) %>%
+  select(-n) %>%
+  top_n(n, Frequency) %>%
+  kable(caption = "Top 10 years from 112 levels", digits = 3)
+```
+
+
+### <font color="darkblue">  Continuous variables </font>
+
+<!-- Descriptive statistics for continuous variables -->
+```{r}
+continous = sapply(data_v1, is.character)
+data_v3 = data_v1[,!continous]
+
+describe(data_v3 %>% select(-contains("ISO Code"))) %>%
+  mutate(name = rownames(.)) %>%
+  select(name, mean, median, min, max) %>%
+  arrange(name) %>%
+  kable(caption = "Descriptive statistics", digits = 2)
+```
+
+<!-- Export clean data without Notes columns -->
+```{r}
+clean_UN = 
+  data_v1 %>%
+  select(-starts_with("Notes")) %>%
+  select(`ISO Code`, Country, contains("Modern"), contains("traditional"))
+
+#write_excel_csv(clean_UN, "clean_UN.csv", na="")
+```
+
