@@ -1,0 +1,51 @@
+---
+title: "Data607_WK7_LAB"
+author: "Femi Adesanya"
+date: "March 18, 2018"
+output: html_document
+---
+
+```{r}
+#install.packages("rjson")
+library(RCurl)
+library(XML)
+library(jsonlite)
+```
+
+```{r}
+source1 = "https://raw.githubusercontent.com/OAdesanya/DATA_607/master/book.html"
+source2 = "https://raw.githubusercontent.com/OAdesanya/DATA_607/master/book.json"
+source3 = "https://raw.githubusercontent.com/OAdesanya/DATA_607/master/book.xml"
+
+```
+
+```{r}
+library(RCurl)
+html_d = getURL(source1)
+xml_d = getURL(source3)
+json_d = getURL(source2)
+
+```
+
+```{r}
+library(RCurl)
+library(XML)
+library(jsonlite)
+df = readHTMLTable(html_d, header = TRUE)
+dfhtml = data.frame(df)
+colnames(dfhtml) = c("Title", "Authors", "Publisher", "Year Published") 
+dfhtml
+
+```
+
+```{r}
+dfx = xmlParse(xml_d)
+dfxml = xmlToDataFrame(dfx)
+dfxml
+```
+
+```{r}
+dfj = fromJSON(json_d)
+dfj
+```
+
