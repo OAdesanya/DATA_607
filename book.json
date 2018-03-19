@@ -1,0 +1,27 @@
+{"favbks":[
+	{
+"title": "Data Science for Dummies",
+"authors": [
+		"LillianPearson"
+               ],
+"publisher" :"Wiley",
+"yearpublished": 2009
+	},
+	{
+"title": "Data Science from Scratch:First Principles with Python",
+"authors": [
+		"Joel Grus"
+		
+               ],
+"publisher" :"Oreilly",
+"yearpublished": 2015
+	},
+	{
+"title": "SQL in 10 Minutes, Sams Teach Yourself: Edition 4",
+"authors": [
+		"Ben Forta"
+               ],
+"publisher" :"SAMS",
+"yearpublished": 2012
+	}]
+}

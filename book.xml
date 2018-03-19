@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<favbks1>
+<book>
+<title>Data Science for Dummies</title>
+<authorname>LillianPearson</authorname>
+<publisher>Wiley</publisher>
+<yearpublished>2009</yearpublished>
+</book>
+<book>
+<title>Data Science from Scratch:First Principles with Python</title>
+<authorname>Joel Grus</authorname>
+<publisher>O'Reilly</publisher>
+<yearpublished>2015</yearpublished>
+</book>
+<book>
+<title>SQL in 10 Minutes, Sams Teach Yourself: Edition 4</title>
+<authorname>Ben Forta</authorname>
+<publisher>SAMS</publisher>
+<yearpublished>2012</yearpublished>
+</book>
+</favbks1> 
